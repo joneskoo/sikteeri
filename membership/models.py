@@ -19,6 +19,7 @@ from django.db import models
 from django.db import transaction
 from django.db.models import Q, Sum, Count
 from django.utils.translation import ugettext_lazy as _
+import django.utils.timezone
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.forms import ValidationError
@@ -91,6 +92,10 @@ class Contact(models.Model):
     homepage = models.URLField(blank=True, verbose_name=_('Homepage'))
 
     def save(self, *args, **kwargs):
+        if self.homepage:
+            if '://' not in self.homepage:
+                self.homepage = "http://{homepage}".format(homepage=self.homepage)
+
         if self.organization_name:
             if len(self.organization_name) < 5:
                 raise Exception("Organization's name should be at least 5 characters.")
@@ -195,7 +200,8 @@ class Membership(models.Model):
     municipality = models.CharField(_('Home municipality'), max_length=128, blank=True)
     nationality = models.CharField(_('Nationality'), max_length=128)
     birth_year = models.IntegerField(_('Year of birth'), null=True, blank=True)
-    organization_registration_number = models.CharField(_('Organization registration number'), max_length=15, null=True, blank=True)
+    organization_registration_number = models.CharField(_('Organization registration number'),
+                                                        blank=True, max_length=15)
 
     person = models.ForeignKey('Contact', related_name='person_set', verbose_name=_('Person'), blank=True, null=True)
     billing_contact = models.ForeignKey('Contact', related_name='billing_set', verbose_name=_('Billing contact'), blank=True, null=True)
@@ -380,7 +386,7 @@ class Membership(models.Model):
         self.organization = None
         self.municipality = ''
         self.birth_year = None
-        self.organization_registration_number = None
+        self.organization_registration_number = ''
         self.save()
         for contact in contacts:
             if contact != None:
@@ -544,7 +550,7 @@ class BillingCycle(models.Model):
         )
 
     membership = models.ForeignKey('Membership', verbose_name=_('Membership'))
-    start =  models.DateTimeField(default=datetime.now(), verbose_name=_('Start'))
+    start =  models.DateTimeField(default=django.utils.timezone.now, verbose_name=_('Start'))
     end =  models.DateTimeField(verbose_name=_('End'))
     sum = models.DecimalField(_('Sum'), max_digits=6, decimal_places=2) # This limits sum to 9999,99
     is_paid = models.BooleanField(default=False, verbose_name=_('Is paid'))
@@ -866,7 +872,7 @@ class Payment(models.Model):
     # extension
     billingcycle = models.ForeignKey('BillingCycle', verbose_name=_('Cycle'), null=True)
     ignore = models.BooleanField(default=False, verbose_name=_('Ignored payment'))
-    comment = models.CharField(max_length=64, verbose_name=_('Comment'), null=True)
+    comment = models.CharField(max_length=64, verbose_name=_('Comment'), blank=True)
 
     reference_number = models.CharField(max_length=64, verbose_name=_('Reference number'), blank=True)
     message = models.CharField(max_length=256, verbose_name=_('Message'), blank=True)
@@ -935,8 +941,7 @@ class ApplicationPoll(models.Model):
 
     membership = models.ForeignKey('Membership', verbose_name=_('Membership'))
     date = models.DateTimeField(auto_now=True, verbose_name=_('Timestamp'))
-    answer = models.CharField(max_length=512,verbose_name=_('Service specific data'),
-                                  blank=False, null=False)
+    answer = models.CharField(max_length=512, verbose_name=_('Service specific data'))
 
 models.signals.post_save.connect(logging_log_change, sender=Membership)
 models.signals.post_save.connect(logging_log_change, sender=Contact)
