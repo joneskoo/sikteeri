@@ -3,8 +3,8 @@ Django>=1.8.0,<1.9.0
 django-auth-ldap==1.2.6
 django-contrib-comments==1.6.1
 gunicorn>=19.3.0,<19.4.0
-Pillow==2.9.0
+Pillow==12.3.0
 psycopg2>=2.6,<2.7
-python-ldap==2.4.20
-reportlab==3.2.0
-sqlparse==0.1.16
+python-ldap==3.4.5
+reportlab==3.6.13
+sqlparse==0.6.0
